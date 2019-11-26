@@ -1,4 +1,5 @@
 
+
 import RPi.GPIO as GPIO
 import time
 from picamera import PiCamera
@@ -16,25 +17,29 @@ import cv2
 import imutils
 import re
 
-count
+count=0
 GPIO.setmode(GPIO.BOARD)
-pir=11
-serv=13
+pir1=11
+pir2=35
+servo1=13
 led1=10
 led2=12
 led3=16
 irsensor1=8
 irsensor2=3
 irsensor3=5
+servo2=31
 
-GPIO.setup(pir,GPIO.IN)
-GPIO.setup(serv,GPIO.OUT)
+GPIO.setup(pir1,GPIO.IN)
+GPIO.setup(servo1,GPIO.OUT)
 GPIO.setup(irsensor1,GPIO.IN)
 GPIO.setup(irsensor2,GPIO.IN)
 GPIO.setup(irsensor3,GPIO.IN)
 GPIO.setup(led1,GPIO.OUT)
 GPIO.setup(led2,GPIO.OUT)
 GPIO.setup(led3,GPIO.OUT)
+GPIO.setup(servo2,GPIO.OUT)
+GPIO.setup(pir2,GPIO.IN)
 
 GPIO.output(led1,GPIO.LOW)
 GPIO.output(led2,GPIO.LOW)
@@ -79,13 +84,30 @@ def visitor_entry_reader():
         finally:
                 GPIO.cleanup()
 
-def irsensor():
+def irsensor_1():
         if GPIO.input(irsensor1):
                 time.sleep(5)
+                print("Go to parking lot A")
                 print("Object Detected at A")
                 print("Parked")
                 GPIO.output(led1,GPIO.HIGH) 
                 time.sleep(5)
+def irsensor_2():
+        if GPIO.input(irsensor2):
+                time.sleep(5)
+                print("Go to parking lot B")
+                print("Object Detected at B")
+                print("Parked")
+                GPIO.output(led2,GPIO.HIGH) 
+                time.sleep(5)
+'''def irsensor_3():
+        if GPIO.input(irsensor3):
+                time.sleep(5)
+                print("Object Detected at C")
+                print("Parked")
+                GPIO.output(led3,GPIO.HIGH) 
+                time.sleep(5)'''
+'''def irsensor
         elif GPIO.input(irsensor2):
                 time.sleep(5)
                 print("Object Detected at B")
@@ -97,13 +119,13 @@ def irsensor():
                 print("Object Detected at C")
                 GPIO.output(led3,GPIO.HIGH)
                 print("parked")
-                time.sleep(100)
+                time.sleep(100)'''
         
                 
         
 
 def carnumberrecognition():
-        img = cv2.imread('/home/pi/Downloads/3.jpg',cv2.IMREAD_COLOR)
+        img = cv2.imread('/home/pi/Downloads/pl.jpeg',cv2.IMREAD_COLOR)
         img = cv2.resize(img, (620,480) )
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.bilateralFilter(gray, 11, 17, 17)
@@ -141,7 +163,7 @@ def carnumberrecognition():
         cur.execute('SELECT carnumber FROM userdata WHERE lastdigit=?',(m,))
         data=cur.fetchone()
         if data is None:
-                visitor_entry_writer()
+                #visitor_entry_writer()
                 visitor_entry_reader()
         else :
                 print("updating")
@@ -166,8 +188,10 @@ def getfilename():
     
 def entry():
         global count
+        global avaliable
+        global occupied
         while True:
-                ini=GPIO.input(pir)
+                ini=GPIO.input(pir1)
                 if ini==1:
                         filename="/home/pi/Desktop/"+getfilename()
                         time.sleep(3)
@@ -178,23 +202,47 @@ def entry():
                         time.sleep(2)
                         carnumberrecognition()
                         count+=1
-                        if count<=3:
+                        if count<=2:
                                 pwm=GPIO.PWM(13,50)
                                 pwm.start(7)
                                 for i in range(0,len(l1)):
                                         input("enter")
                                         dc=(1./18.)*l1[i]+2
                                         pwm.ChangeDutyCycle(dc)
-                                 pwm.stop()
+                                pwm.stop()
                         else :
                                 print("Parking lot is full")
                         if(len(avaliable)>0):
                                 occupied.append(avaliable[0])
-                                print("Go to parking lot ",avaliable[0])
-                        irsensor()
-                                
-                        break;
+                                j=avaliable[0]
+                                if j=='A':
+                                        irsensor_1()
+                                if j=='B':
+                                        irsensor_2()
+                                '''if j=='C':
+                                        irsensor_3()'''
+                                avaliable=avaliable[1:]
+                                entry()
+
+                '''elif GPIO.input(pir2):
+                        count-=1
+                        
+                        s=input("enter User or Visiter")
+                        if s=='Visiter':
+                                s1=input("enter name")
+                                conn.execute("UPDATE visitor SET outtime=? WHERE Name=?",(s1))
+                                conn.commit()
+                                print("updated")
+                                curr=conn.execute("SELECT * FROM visitor")
+                                for row in curr:
+                                        print(str(row[0]).ljust(10),row[1].ljust(10),str(row[2]).ljust(10),str(row[3]).ljust(10),str(row[4]).ljust(10),str(row[5]).ljust(10))
+                        for i in range(0,len(l1)):
+                                        input("enter")
+                                        dc=(1./18.)*l1[i]+2
+                                        pwm.ChangeDutyCycle(dc)
+                        pwm.stop()
+                        GPIO.cleanup()
+                        conn.close()'''
+
 entry()
-GPIO.cleanup()
-conn.close()
-            
+
